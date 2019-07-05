@@ -15,5 +15,6 @@ Using the MazeBot API to pull the mazes and find the path from A to B.
 ```bash
 git clone https://github.com/devforfu/mazebot $GOPATH/src/mazebot
 cd $GOPATH/src/mazebot
-go run main.go
+go run main_random.go
+go run main_race -username=<yourgithubname>
 ```
