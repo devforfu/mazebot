@@ -3,8 +3,8 @@ package solver
 import (
 	"fmt"
 	"math"
-	"maze/generator"
-	"maze/solver/collections"
+	"mazebot/generator"
+	"mazebot/solver/collections"
 )
 
 type Direction int

@@ -3,7 +3,7 @@ package solver
 import (
     "fmt"
     "math"
-    "maze/generator"
+    "mazebot/generator"
 )
 
 type Vertex struct {

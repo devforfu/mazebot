@@ -9,27 +9,47 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
-const baseURL = "https://api.noopschallenge.com/mazebot"
+const baseURL = "https://api.noopschallenge.com"
 type Endpoint uint8
 const (
 	GenerateRandom = iota
-	SubmitSolution
+	SubmitRandomSolution
+	StartRace
 	Unknown
 )
 
 func endpointName(endpoint Endpoint) string {
 	var name string
 	switch endpoint {
-	case GenerateRandom: name = "random"
-	case SubmitSolution: name = "mazes"
-	case Unknown: name = ""
+	case GenerateRandom: 	   name = "mazebot/random"
+	case SubmitRandomSolution: name = "mazebot/mazes"
+	case StartRace:			   name = "mazebot/race/start"
+	case Unknown: 			   name = ""
 	}
 	return fmt.Sprintf("%s/%s", baseURL, name)
 }
 
 type MazeBot struct {}
+
+type MazeBotResponse struct {
+	Result string    `json:"result"`
+	Message string   `json:"message"`
+	ShortestLen int  `json:"shortestSolutionLength"`
+	SubmittedLen int `json:"yourSolutionLength"`
+	Elapsed int 	 `json:"elapsed"`
+	NextMaze string  `json:"nextMaze"`
+	Certificate string `json:"certificate"`
+	Error string
+}
+
+type Certificate struct {
+	Message string
+	Elapsed float32
+	Completed time.Time
+}
 
 func (m *MazeBot) CreateMaze() *Maze {
 	return m.requestMaze(endpointName(GenerateRandom))
@@ -40,18 +60,35 @@ func (m *MazeBot) CreateMazeWithSize(size int) *Maze {
 	return m.requestMaze(url)
 }
 
-type SubmissionResult struct {
-	Result string    `json:"result"`
-	Message string   `json:"message"`
-	ShortestLen int  `json:"shortestSolutionLength"`
-	SubmittedLen int `json:"yourSolutionLength"`
-	Elapsed int 	 `json:"elapsed"`
-	Error string
+func (m *MazeBot) SubmitRandomMazeSolution(mazeID string, solution string) MazeBotResponse {
+	url := fmt.Sprintf("%s/%s", endpointName(SubmitRandomSolution), mazeID)
+	data := []byte(fmt.Sprintf(`{"directions": "%s"}`, solution))
+	return m.sendRequest(url, data)
 }
 
-func (m *MazeBot) SubmitSolution(mazeID string, solution string) (result SubmissionResult) {
-	url := fmt.Sprintf("%s/%s", endpointName(SubmitSolution), mazeID)
+func (m *MazeBot) StartRace(username string) MazeBotResponse {
+	return m.sendRequest(endpointName(StartRace), []byte(fmt.Sprintf(`{"login": "%s"}`, username)))
+}
+
+func (m *MazeBot) GetNextMaze(mazePath string) *Maze {
+	return m.requestMaze(fmt.Sprintf("%s%s", baseURL, mazePath))
+}
+
+func (m *MazeBot) SubmitRaceSolution(mazePath string, solution string) MazeBotResponse {
+	url := fmt.Sprintf("%s%s", baseURL, mazePath)
 	data := []byte(fmt.Sprintf(`{"directions": "%s"}`, solution))
+	return m.sendRequest(url, data)
+}
+
+func (m *MazeBot) FetchCertificate(path string) Certificate {
+	url := fmt.Sprintf("%s%s", baseURL, path)
+	resp, _ := http.Get(url)
+	var cert Certificate
+	_ = json.NewDecoder(resp.Body).Decode(&cert)
+	return cert
+}
+
+func (m *MazeBot) sendRequest(url string, data []byte) (result MazeBotResponse) {
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(data))
 	if err != nil {
 		result.Error = fmt.Sprintf("Submission failed: %s", err.Error())
@@ -77,7 +114,7 @@ type mazeResponse struct {
 	Map [][]string `json:"map"`
 }
 
-var mazeNameRegex = regexp.MustCompile("Maze #\\d+ \\((\\d+)x(\\d+)\\)")
+var mazeNameRegex = regexp.MustCompile("Maze[\\d\\w\\s]*#\\d+ \\((\\d+)x(\\d+)\\)")
 
 func (m *MazeBot) requestMaze(URL string) *Maze {
 	resp, err := http.Get(URL)

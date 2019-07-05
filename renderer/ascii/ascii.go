@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"maze/generator"
+	"mazebot/generator"
 	"os"
 	"strconv"
 	"strings"

@@ -2,11 +2,10 @@ package main
 
 import (
     "log"
-    "maze/generator"
-    "maze/renderer/ascii"
-    "maze/solver"
-    "maze/utils"
-    "strings"
+    "mazebot/generator"
+    "mazebot/renderer/ascii"
+    "mazebot/solver"
+    "mazebot/utils"
     "time"
 )
 
@@ -58,8 +57,8 @@ func Solve(input <-chan *generator.Maze, output chan<- solution) {
 func Submit(input <-chan solution, results chan<- SolvedMaze) {
    bot := generator.MazeBot{}
    for solution := range input {
-       actions := convertToString(solution.actions)
-       result := bot.SubmitSolution(solution.maze.ID, actions)
+       actions := utils.ConvertToString(solution.actions)
+       result := bot.SubmitRandomMazeSolution(solution.maze.ID, actions)
        results <- SolvedMaze{
            Maze:solution.maze,
            Actions:actions,
@@ -69,24 +68,11 @@ func Submit(input <-chan solution, results chan<- SolvedMaze) {
    close(results)
 }
 
-func convertToString(path solver.Path) string {
-    var b strings.Builder
-    for _, step := range path {
-        switch step {
-        case solver.North: b.WriteString("N")
-        case solver.East:  b.WriteString("E")
-        case solver.South: b.WriteString("S")
-        case solver.West:  b.WriteString("W")
-        }
-    }
-    return b.String()
-}
-
 type SolvedMaze struct {
     Maze *generator.Maze
     Actions string
     TimeToSolveLocally time.Duration
-    BotResponse *generator.SubmissionResult
+    BotResponse *generator.MazeBotResponse
 }
 
 func main() {
